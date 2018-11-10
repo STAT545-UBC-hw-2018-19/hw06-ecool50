@@ -5,9 +5,9 @@ In this assignment, I will attempt to do the following tasks:
 * Work with a nested data frame
 
 ## Please find below links to my assignment solutions
-* [The Rmarkdown File]()
-* [The Markdown File]()
-* [The PDF File]()
+* [The Rmarkdown File](https://github.com/STAT545-UBC-students/hw06-ecool50/blob/master/hw06.Rmd)
+* [The Markdown File](https://github.com/STAT545-UBC-students/hw06-ecool50/blob/master/hw06.md)
+* [The PDF File](https://github.com/STAT545-UBC-students/hw06-ecool50/blob/master/hw06.pdf)
 
 ## Caveats
 * Some of the work here may have been borrowed and modified from other sources.

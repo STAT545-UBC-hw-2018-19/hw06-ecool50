@@ -9,4 +9,8 @@ In this assignment, I will attempt to do the following tasks:
 * [The Markdown File]()
 * [The PDF File]()
 
-
+## Caveats
+* Some of the work here may have been borrowed and modified from other sources.
+* This was purely done to illustrate some ideas
+* I take no credit for parts of the work that are not mine
+* Let credit be given where it is due.

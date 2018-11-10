@@ -1,0 +1,284 @@
+---
+title: "HW 05 Soultions"
+author: "Elijah Willie"
+date: "November 08, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+In this assignment, I will attempt to do the following tasks:
+
+* Writing functions that are useful to analyze the gapminder dataset
+* Work with a nested data frame
+
+## Load in required libraries
+
+First we will load in all the libraries we will be using for this assignment.
+```{r}
+library(gapminder)
+suppressMessages(library("tidyverse"))
+library(knitr)
+suppressMessages(library(reshape2))
+suppressMessages(library(Hmisc))
+suppressMessages(library(gridExtra))
+library(knitr)
+suppressMessages(library(MASS))
+suppressMessages(library(broom))
+```
+
+
+## Part 1: Writing Functions
+
+
+### For this section, I will do the following:
+
+* Fit a model model linear model that predicts `life expectancy` for `year`, `pop` or `gdpPercap` for a given country.
+* Create a function to plot a linear fit
+
+#### Create a function that fits a linear model
+
+```{r Fit a linear model}
+fit_model <- function(Country, variable, data){
+#extract the data for the specific country
+data_country <-  as.data.frame(data) %>% 
+  filter(country == Country)
+
+#fit the model
+if(variable == "pop"){
+  model_fit <- lm(lifeExp ~ pop, data_country)
+}
+if(variable == "gdpPercap"){
+  model_fit  <- lm(lifeExp ~ gdpPercap, data_country)
+}
+if(variable == "year"){
+  model_fit <- lm(lifeExp ~ year, data_country)
+}
+
+return(model_fit)
+}
+
+```
+
+
+#### Create a function that plots the a given regression fit
+
+```{r Function to plot linear fit}
+plotReg <- function (fit) {
+
+require(ggplot2)
+
+p <- ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "red") +
+  labs(title = paste("Intercept =",signif(fit$coef[[1]],5 ),
+                     " Slope =",signif(fit$coef[[2]], 5),
+                     " P =",signif(summary(fit)$coef[2,4], 5)))
+return(p)
+}
+
+```
+
+
+#### Test out the functions
+Predict life expectancy for `Liberia` and `Ghana` using population.
+
+```{r Predict with population}
+#create a set of countries
+countries <- c("Liberia", "Ghana")
+
+#fit a linear model using population
+res <- lapply(countries, fit_model, variable = "pop", data = gapminder)
+
+#generate the plots
+plots <- lapply(res, plotReg)
+
+#put them on a grid
+grid.arrange(plots[[1]], plots[[2]])
+```
+
+Looking at the plots above, we see that population does a much better job at predicting life expectancy when for `Ghana` When compared with `Liberia`.
+
+Now predict again, but this time use `gdpPercap`
+
+```{r Predict with gdpPercap} 
+#fit a linear model using gdpPercap
+res <- lapply(countries, fit_model, variable = "gdpPercap", data = gapminder)
+
+#generate the plots
+plots <- lapply(res, plotReg)
+
+#put them on a grid
+grid.arrange(plots[[1]], plots[[2]])
+
+```
+
+Here we see that `gdpPercap` does a pretty terrible job at predicting life xpectancy. Maybe using year would help.
+
+```{r Predict with Year}
+#fit a linear model using population
+res <- lapply(countries, fit_model, variable = "year", data = gapminder)
+
+#generate the plots
+plots <- lapply(res, plotReg)
+
+#put them on a grid
+grid.arrange(plots[[1]], plots[[2]])
+
+```
+
+That is much better indeed. We still see that it performs much better for `Ghana` than `Liberia`.
+
+
+## Part 2 Work with a nested data frame
+
+In the part, I will attempt to do the following
+
+* Nest the data by country (and continent).
+* Fit a model of life expectancy against year. Possibly quadratic, possibly robust.
+* Use functions for working with fitted models or the `broom` package to get information out of your linear models.
+* Use the usual dplyr, tidyr, and ggplot2 workflows to explore, e.g., the estimated cofficients.
+* I will be following the tutorial [here](http://stat545.com/block024_group-nest-split-map.html) closely, but with my own twists and turns.
+
+```{r nesting}
+#nest the gapminder dataset by country and continent
+gap_nested <- gapminder %>% 
+   group_by(continent, country) %>% 
+   nest()
+
+#lets get some information on the new dataset
+gap_nested
+nrow(gap_nested)
+ncol(gap_nested)
+```
+
+We see that the new dataframe has $142$ rows and $3$ columns
+
+Now lets take a look at some of the elements of the new nested dataframe
+
+```{r Inspect Dataframe}
+#we can use indices to get information about the data
+kable(gap_nested[[1, "data"]])
+
+#let see if we can get the country
+gap_nested$country[[1]]
+
+#we can even get data for a specific country
+gap_nested[gap_nested$country == "Liberia",][["data"]]
+
+#lets try it for another country
+gap_nested[gap_nested$country == "Ghana",][["data"]]
+```
+
+
+
+Now lets fit some  models to the data and see how they behave
+```{r}
+#fit a linear model
+lin_fit <- lm(lifeExp ~ year, data = gap_nested[[1, "data"]])
+paste("linear fit summary: ")
+summary(lin_fit)
+#compute the AIC and BIC for this model
+paste("linear fit AIC and BIC are: ", AIC(lin_fit), BIC(lin_fit))
+
+#fit a quadratic
+quad_fit <- lm(lifeExp ~ poly(year, 2), data = gap_nested[[1, "data"]])
+paste("Quad fit summary: ")
+summary(quad_fit)
+#compute the AIC and BIC for this model
+paste("Quad fit AIC and BIC are: ", AIC(lin_fit), BIC(lin_fit))
+
+#fit a robust regression
+#note that we will need to use the MASS library to do this
+robust_fit <- rlm(lifeExp ~ year, data = gap_nested[[1, "data"]])
+paste("Robust fit summary: ")
+summary(robust_fit)
+#compute the AIC and BIC for this model
+paste("Robust fit AIC and BIC are: ",AIC(robust_fit), BIC(robust_fit))
+```
+
+We see that for `lifeEXp`, there is no difference in using a `linear`, `quadratic`, or `robust` model. They all return the same `AIC` and `BIC` values.
+
+
+Now all this seems cumbesome, so lets create another function to fit the linear and the robust for us. :relieved:
+
+```{r nested fit function}
+nested_fit <- function(Country, type = "linear", variable = "pop"){
+  country_dat <- as.data.frame(gap_nested[gap_nested$country == Country,][["data"]])
+  if(type == "robust"){
+    if(variable == "pop") fit <- rlm(lifeExp ~ pop, data = country_dat)
+    if(variable == "year") fit <- rlm(lifeExp ~ year, data = country_dat)
+    if(variable == "gdpPercap") fit <- rlm(lifeExp ~ gdpPercap, data = country_dat)
+  }
+  if(type == "linear"){
+    if(variable == "pop") fit <- lm(lifeExp ~ pop, data = country_dat)
+    if(variable == "year") fit <- lm(lifeExp ~ year, data = country_dat)
+    if(variable == "gdpPercap") fit <- lm(lifeExp ~ gdpPercap, data = country_dat)
+  }
+  return(fit)
+}
+```
+
+Lets test this function out. :smirk:
+```{r}
+#compute a fit for liberia using a regular linear model
+res <- nested_fit("Liberia", variable = "pop")
+#summarize the model
+summary(res)
+#compute AIC and BIC
+#using the function defined earlier, plot this fit
+plotReg(res)
+
+#now fit a robust model
+res_rob <- nested_fit("Liberia", type = "robust", variable = "pop")
+
+#show some summary
+summary(res_rob)
+```
+
+That was fun, now lets use the `map` function to do this for a few countries from part $1$. :wink:
+
+```{r Map to few countries}
+#use the map function to fit to two countries using year as predictor
+fits <- map(countries,nested_fit)
+fits
+
+```
+
+We can finally do this for all countries in our dataset. :muscle:
+
+```{r Map to all countries}
+#apply this function to all countries in the dataset
+gap_nested <- gap_nested %>% 
+   mutate(fit = map(country, nested_fit))
+
+#show the result
+gap_nested
+```
+
+Finally, we will use the `broom` library to tidy up the results
+
+```{r tidy the data}
+#apply broom to each country
+gap_nested <- gap_nested %>% 
+  mutate(tidy = map(fit, tidy))
+
+#have a look at the result
+gap_nested
+
+#lets have a look at the tidy table for one of the countries
+gap_nested[gap_nested$country == "Liberia",][["tidy"]]
+
+#we can finally return to the original data type for which we started using all the information we have obtained
+gap_coefs <- gap_nested %>% 
+   dplyr::select(continent, country, tidy) %>% 
+   unnest(tidy)
+#show the final table
+gap_coefs
+```
+
+Now isn't that beautiful!! :smiley:
